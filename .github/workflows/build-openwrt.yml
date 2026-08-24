@@ -15,7 +15,13 @@ jobs:
       - name: Install deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential flex bison git rsync wget unzip python3 python3-pip python3-distutils python3-setuptools libncurses-dev zlib1g-dev libssl-dev libelf-dev file gawk gettext quilt bc time subversion libgmp-dev libmpc-dev libmpfr-dev patchutils diffutils perl sed coreutils xz-utils
+          sudo apt-get install -y build-essential clang flex bison g++ gawk \
+            gcc-multilib g++-multilib gettext git rsync wget unzip \
+            libncurses-dev libssl-dev libelf-dev file \
+            python3 python3-pip python3-setuptools \
+            zlib1g-dev quilt bc time subversion \
+            libgmp-dev libmpc-dev libmpfr-dev \
+            patchutils diffutils perl sed coreutils xz-utils
 
       - name: Clone OpenWrt
         run: |
