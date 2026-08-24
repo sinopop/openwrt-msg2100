@@ -1,0 +1,109 @@
+name: Build OpenWrt MSG2100-UPON-AC
+
+on:
+  workflow_dispatch:        # 手动触发（Actions 页面点 Run workflow）
+    inputs:
+      openwrt_ref:
+        description: 'OpenWrt 分支/tag（默认 main）'
+        required: false
+        default: 'main'
+      extra_jobs:
+        description: '并行编译数（留空自动）'
+        required: false
+        default: ''
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest          # 4 vCPU / 16GB RAM
+    timeout-minutes: 330            # 上限 5.5 小时
+    steps:
+      - name: Checkout (DTS + workflow)
+        uses: actions/checkout@v4
+
+      - name: 安装编译依赖
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential flex bison git rsync wget unzip \
+            python3 python3-pip python3-distutils python3-setuptools \
+            libncurses-dev zlib1g-dev libssl-dev libelf-dev file gawk gettext quilt \
+            bc time subversion libgmp-dev libmpc-dev libmpfr-dev \
+            patchutils diffutils perl sed coreutils xz-utils
+
+      - name: 克隆 OpenWrt 源码
+        run: |
+          git clone --depth=1 --branch "${{ inputs.openwrt_ref || 'main' }}" \
+            https://github.com/openwrt/openwrt.git openwrt
+          cd openwrt
+          git log --oneline -3
+
+      - name: 集成 MSG2100-UPON-AC 设备支持
+        run: |
+          cd openwrt
+          mkdir -p target/linux/econet/dts
+          cp ../en7528_raisecom_msg2100-upon-ac.dts target/linux/econet/dts/
+          # 设备定义注入 image/Makefile（幂等）
+          if ! grep -q "raisecom_msg2100-upon-ac" target/linux/econet/image/Makefile; then
+            cat >> target/linux/econet/image/Makefile <<'EOF'
+
+# ==== Raisecom MSG2100-UPON-AC (free bootbase: load addr 0x80002000) ====
+define Device/raisecom_msg2100-upon-ac
+  DEVICE_VENDOR := Raisecom
+  DEVICE_MODEL := MSG2100-UPON-AC
+  DEVICE_DTS := en7528_raisecom_msg2100-upon-ac
+  KERNEL_LOADADDR := 0x80002000
+  KERNEL_SIZE := 4096k
+  KERNEL := kernel-bin | append-dtb | lzma | kernel-trx | tclinux-free-bootbase-jump
+  KERNEL_INITRAMFS := kernel-bin | append-dtb
+  IMAGES := tclinux.trx sysupgrade.bin
+  IMAGE/tclinux.trx := append-kernel | pad-to $$$$(KERNEL_SIZE) | append-ubi | check-size 40m
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+  DEVICE_PACKAGES := kmod-econet-eth
+endef
+TARGET_DEVICES += raisecom_msg2100-upon-ac
+EOF
+            echo "设备定义已注入"
+          else
+            echo "设备定义已存在"
+          fi
+          grep -A14 "Device/raisecom_msg2100-upon-ac" target/linux/econet/image/Makefile | head -16
+
+      - name: 更新 feeds
+        run: |
+          cd openwrt
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+      - name: 生成配置
+        run: |
+          cd openwrt
+          cat > .config <<'CFG'
+CONFIG_TARGET_econet=y
+CONFIG_TARGET_econet_en7528=y
+CONFIG_TARGET_econet_en7528_DEVICE_raisecom_msg2100-upon-ac=y
+CONFIG_TARGET_ROOTFS_SQUASHFS=y
+CFG
+          make defconfig
+          echo "--- 确认设备已选上 ---"
+          grep -E "CONFIG_TARGET_econet|raisecom" .config | head -10
+
+      - name: 编译（首次约 1~3 小时）
+        run: |
+          cd openwrt
+          JOBS="${{ inputs.extra_jobs }}"
+          if [ -z "$JOBS" ]; then JOBS=$(nproc); fi
+          make -j"$JOBS" V=s 2>&1 | tee build.log
+          echo "EXIT_STATUS=$?" | tee -a build.log
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: openwrt-msg2100
+          path: |
+            openwrt/bin/targets/econet/en7528/*.trx
+            openwrt/bin/targets/econet/en7528/*initramfs*
+            openwrt/bin/targets/econet/en7528/*.bin
+            openwrt/build.log
+            openwrt/.config
+          if-no-files-found: error
