@@ -56,6 +56,7 @@ jobs:
       - name: Build
         run: |
           cd openwrt
+          set -o pipefail
           make -j$(nproc) V=s 2>&1 | tee build.log
 
       - name: Upload
