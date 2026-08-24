@@ -34,7 +34,7 @@ jobs:
           cd openwrt
           mkdir -p target/linux/econet/dts
           cp ../en7528_raisecom_msg2100-upon-ac.dts target/linux/econet/dts/
-          patch -p1 < ../msg2100-device.patch
+          cat ../msg2100-device.mk >> target/linux/econet/image/en7528.mk
           grep -A14 "raisecom_msg2100-upon-ac" target/linux/econet/image/en7528.mk
 
       - name: Feeds

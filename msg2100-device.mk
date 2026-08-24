@@ -1,0 +1,12 @@
+define Device/raisecom_msg2100-upon-ac
+  $(call Device/tclinux-ubi)
+  DEVICE_VENDOR := Raisecom
+  DEVICE_MODEL := MSG2100-UPON-AC
+  DEVICE_DTS := en7528_raisecom_msg2100-upon-ac
+  FACTORY_SIZE := 40m
+  TRX_LOADADDR := 0x80002000
+  KERNEL := kernel-bin | append-dtb | tclinux-free-bootbase-jump | lzma | \
+    kernel-trx
+  DEVICE_PACKAGES := kmod-econet-eth
+endef
+TARGET_DEVICES += raisecom_msg2100-upon-ac
