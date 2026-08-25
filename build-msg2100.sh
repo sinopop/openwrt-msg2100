@@ -21,8 +21,11 @@ git pull || true
 
 echo "=== [2/5] 集成 MSG2100-UPON-AC 设备支持 ==="
 DTS_SRC="$(cd "$(dirname "$0")" && pwd)/en7528_raisecom_msg2100-upon-ac.dts"
+TIMER_PATCH="$(cd "$(dirname "$0")" && pwd)/102-timer-fix-block-mapping.patch"
 mkdir -p target/linux/econet/dts
 cp "$DTS_SRC" target/linux/econet/dts/
+# 修复 timer 块映射 bug (EN7528 4 VPE 启动时 membase[1] NULL 导致 panic)
+cp "$TIMER_PATCH" target/linux/econet/patches-6.18/
 
 # 注入设备定义（幂等：已存在则跳过）
 if ! grep -q "raisecom_msg2100-upon-ac" target/linux/econet/image/Makefile; then

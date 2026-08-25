@@ -1,0 +1,43 @@
+From: recovery
+Subject: mips: econet: timer: fix timer block mapping at boot
+
+timer_init() used DIV_ROUND_UP(num_possible_cpus(), 2) to determine how
+many register blocks to iomap. At early boot with VPE-based SMP, MIPS
+reports num_possible_cpus()=1 (VPEs not yet brought online), giving
+num_blocks=1. Only membase[0] is then mapped via of_iomap.
+
+The EN7528/EN751627 SoCs have 2 physical cores, each with 2 VPEs, giving
+NR_CPUS=4 and two timer register blocks (one per core). cevt_init()
+calls cevt_dev_init(i) for each possible CPU; with NR_CPUS=4,
+cevt_dev_init(2) writes to reg_compare(2) which dereferences
+membase[2>>1] = membase[1], which is NULL, causing a kernel panic.
+
+Fix: replace the runtime calculation with ECONET_NUM_BLOCKS, which is
+DIV_ROUND_UP(NR_CPUS, 2) evaluated at compile time (same expression used
+to declare the membase[] array), so the loop bound and array size are
+provably consistent.
+
+--- a/drivers/clocksource/timer-econet-en751221.c
++++ b/drivers/clocksource/timer-econet-en751221.c
+@@ -201,7 +201,6 @@ static int __init timer_init(struct device_node *np)
+ static int __init timer_init(struct device_node *np)
+ {
+-	int num_blocks = DIV_ROUND_UP(num_possible_cpus(), 2);
+ 	struct clk *clk;
+ 	int ret, i;
+ 
+@@ -260,7 +259,7 @@ static int __init timer_init(struct device_node *np)
+ 	econet_timer.freq_hz = clk_get_rate(clk);
+ 
+-	for (i = 0; i < num_blocks; i++) {
++	for (i = 0; i < ECONET_NUM_BLOCKS; i++) {
+ 		econet_timer.membase[i] = of_iomap(np, i);
+ 		if (!econet_timer.membase[i]) {
+ 			pr_err("%pOFn: failed to map register [%d]\n", np, i);
+@@ -296,7 +295,7 @@ static int __init timer_init(struct device_node *np)
+ err_unmap:
+-	for (i = 0; i < num_blocks; i++) {
++	for (i = 0; i < ECONET_NUM_BLOCKS; i++) {
+ 		if (econet_timer.membase[i])
+ 			iounmap(econet_timer.membase[i]);
+ 	}
