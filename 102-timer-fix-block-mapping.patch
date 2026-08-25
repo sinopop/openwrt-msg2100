@@ -19,22 +19,25 @@ provably consistent.
 
 --- a/drivers/clocksource/timer-econet-en751221.c
 +++ b/drivers/clocksource/timer-econet-en751221.c
-@@ -200,5 +200,4 @@ static int __init timer_init(struct device_node *np)
+@@ -201,6 +201,5 @@ static int __init timer_init(struct device_node *np)
  static int __init timer_init(struct device_node *np)
  {
 -	int num_blocks = DIV_ROUND_UP(num_possible_cpus(), 2);
  	struct clk *clk;
  	int ret, i;
-@@ -259,5 +258,5 @@ static int __init timer_init(struct device_node *np)
+ 
+@@ -260,6 +259,6 @@ static int __init timer_init(struct device_node *np)
  	econet_timer.freq_hz = clk_get_rate(clk);
+ 
 -	for (i = 0; i < num_blocks; i++) {
 +	for (i = 0; i < ECONET_NUM_BLOCKS; i++) {
  		econet_timer.membase[i] = of_iomap(np, i);
  		if (!econet_timer.membase[i]) {
  			pr_err("%pOFn: failed to map register [%d]\n", np, i);
-@@ -295,4 +294,4 @@ static int __init timer_init(struct device_node *np)
+@@ -296,5 +295,5 @@ static int __init timer_init(struct device_node *np)
  err_unmap:
 -	for (i = 0; i < num_blocks; i++) {
 +	for (i = 0; i < ECONET_NUM_BLOCKS; i++) {
  		if (econet_timer.membase[i])
  			iounmap(econet_timer.membase[i]);
+ 	}
