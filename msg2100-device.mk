@@ -7,6 +7,6 @@ define Device/raisecom_msg2100-upon-ac
   TRX_LOADADDR := 0x80002000
   KERNEL := kernel-bin | append-dtb | tclinux-free-bootbase-jump | lzma | \
     kernel-trx
-  DEVICE_PACKAGES := kmod-econet-eth
+  DEVICE_PACKAGES := kmod-econet-eth luci
 endef
 TARGET_DEVICES += raisecom_msg2100-upon-ac
