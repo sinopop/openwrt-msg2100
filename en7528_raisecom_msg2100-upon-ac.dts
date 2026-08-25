@@ -37,11 +37,12 @@
 
 	memory@0 {
 		device_type = "memory";
-		reg = <0x00000000 0x20000000>;	/* 512MB */
+		reg = <0x00000000 0x1c000000>;	/* 448MB (top 64MB is NAND/peripherals) */
 	};
 
 	chosen {
 		stdout-path = "serial0:115200n8";
+		linux,usable-memory-range = <0x00020000 0x1bfe0000>;
 	};
 
 	aliases {
