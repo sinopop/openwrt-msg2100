@@ -43,6 +43,7 @@
 	chosen {
 		stdout-path = "serial0:115200n8";
 		linux,usable-memory-range = <0x00020000 0x1bfe0000>;
+		bootargs = "ubi.mtd=rootfs root=ubi0:rootfs rootfstype=squashfs";
 	};
 
 	aliases {
@@ -116,7 +117,13 @@
 
 		partition@80000 {
 			label = "tclinux";
-			reg = <0x80000 0x2800000>;
+			reg = <0x80000 0x400000>;
+			econet,enable-remap;
+		};
+
+		partition@480000 {
+			label = "rootfs";
+			reg = <0x480000 0x2400000>;
 			econet,enable-remap;
 		};
 
