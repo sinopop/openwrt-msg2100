@@ -73,6 +73,13 @@ jobs:
           set -o pipefail
           make -j$(nproc) V=s 2>&1 | tee build.log
 
+      - name: Build econet-xpon ipk (standalone, not in image)
+        run: |
+          cd openwrt
+          # 单独编译 xpon 驱动生成 .ipk，便于独立安装测试（不编进主镜像，风险最小）
+          make package/kernel/econet-xpon/compile V=s 2>&1 | tee -a build.log || echo "XPON_BUILD_FAILED"
+          find bin/packages -name "*econet-xpon*" 2>/dev/null
+
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
@@ -81,6 +88,7 @@ jobs:
             openwrt/bin/targets/econet/en7528/*.trx
             openwrt/bin/targets/econet/en7528/*initramfs*
             openwrt/bin/targets/econet/en7528/*.bin
+            openwrt/bin/packages/mipsel_24kc/kernel/*econet-xpon*.ipk
             openwrt/build.log
             openwrt/.config
           if-no-files-found: error
