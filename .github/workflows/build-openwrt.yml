@@ -37,6 +37,9 @@ jobs:
           cat ../msg2100-device.mk >> target/linux/econet/image/en7528.mk
           # 修复 timer 块映射 bug (EN7528 4 VPE 启动时 membase[1] NULL panic)
           cp ../102-timer-fix-block-mapping.patch target/linux/econet/patches-6.18/
+          # 覆盖默认网络配置: LAN 口(lan1-4)进网桥而非 eth0 (DSA)
+          mkdir -p target/linux/econet/base-files/etc/config
+          cp ../msg2100-network target/linux/econet/base-files/etc/config/network
           grep -A14 "raisecom_msg2100-upon-ac" target/linux/econet/image/en7528.mk
 
       - name: Feeds
