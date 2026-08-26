@@ -29,6 +29,14 @@ jobs:
           cd openwrt
           git log --oneline -3
 
+      - name: Add econet-xpon package (PR #24577)
+        run: |
+          cd openwrt
+          git clone --depth=1 -b econet-xpon-gpon https://github.com/AKoo7/openwrt.git /tmp/pr24577 2>&1 | tail -1
+          cp -r /tmp/pr24577/package/kernel/econet-xpon package/kernel/
+          cp /tmp/pr24577/package/kernel/econet-eth/patches/100-xpon-bench-spike.patch package/kernel/econet-eth/patches/
+          ls package/kernel/econet-xpon/Makefile
+
       - name: Add device
         run: |
           cd openwrt
