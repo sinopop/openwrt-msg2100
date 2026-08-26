@@ -27,23 +27,23 @@
 | RAM MB | 512 (DDR3L) | 硬件规格 K4B4G1646B；meminfo MemTotal 442744kB（DTS 限 448MB） |
 | Flash MB | 256 (SPI NAND) | dmesg: Micron SPI NAND 256MiB, MT29F2G01 |
 | Switch | MT7530 | mdio_bus: mt7530-0:09..0c；DTS `&switch` |
-| Ethernet 1Gbit ports | 4 | gsw_port1-4 → lan1-4 |
+| Ethernet 1Gbit ports | 4 | gsw_port1-4 → lan1-4；前面板 LAN1-LAN4 |
 | Ethernet 100M ports | 0 | — |
 | WLAN | 无（纯有线） | DTS 无 wifi 节点，`&pcie0/1 disabled` |
-| Modem | 1x GPON 上行（econet-xpon，测试中） | 硬件上 PON 口；OpenWrt 下驱动待测试 |
+| Modem | 1x GPON 上行（econet-xpon，测试中） | PON 蓝口（SC/APC）；OpenWrt 下驱动待测试 |
 | Phone ports | 0 | 纯数据 ONT |
 | USB ports | 0 | DTS 无 USB；纯有线设备 |
 | SATA/SFP/Video/Audio | 0 | — |
 | Bootloader | other（TrendChip TcBoot free bootbase v1.1） | 引导输出；ToH 枚举无对应项，填 "other" |
 | Serial | Yes | UART @ 0x1fbf0000, ttyS0 |
 | Serial connection parameters | 115200 / 8N1 | DTS stdout-path |
-| Serial connection voltage | 3.3V | Econet SoC 标准 UART（待用户确认量测） |
-| JTAG | 未知（待确认） | — |
-| GPIOs | 待确认 | gpiochip0/1 存在 |
-| LED count | 待确认 | 面板 LED（PON/LOS/LAN/电源 等） |
-| Button count | 待确认 | 复位键等 |
-| Power Supply | 待确认 | 电源适配器规格（12V? / POE?） |
-| Outdoor | No | 室内 ONT |
+| Serial connection voltage | 3.3V | Econet SoC 标准 UART |
+| JTAG | 未知 | — |
+| GPIOs | 未知 | gpiochip0/1 存在 |
+| LED count | 4 | 前面板：PON、SYS、LOS、PWR（照片确认） |
+| Button count | 1（RST 复位键）+ 1 电源开关 | 前面板 RST 小孔 + PWR 电源按钮 |
+| Power Supply | +12V, 1A | 适配器 + 贴纸「额定输入：+12V,1A」 |
+| Outdoor | No | 室内 ONT（中国移动政企网关） |
 
 ## 三、固件与支持状态
 
@@ -55,9 +55,25 @@
 | Installation method(s) | Serial | 串口 + bootloader `xmdm`（Xmodem 刷 tclinux 分区） |
 | Recovery method(s) | Serial | bootloader Xmodem 重刷；内核 panic 后重启循环可 Ctrl+D 进 bldr> |
 | Firmware OpenWrt Install URL | 待填 | 上游化后官方 downloads 链接；当前为自建 artifacts |
-| Firmware OEM Stock URL | 无公开 | 运营商定制固件不外发 |
-| OEM Device Homepage URL | 待查 | Raisecom 官网产品页 |
+| Firmware OEM Stock URL | 无公开 | 运营商定制固件不外发（中国移动集采） |
+| OEM Device Homepage URL | 待查 | Raisecom（瑞斯康达）官网产品页 |
 | OWrt Forum Topic URL | 待建 | 建议在 forum.openwrt.org 发介绍帖 |
+
+## 三·b、设备贴纸信息（标签照片确认）
+
+| 项目 | 值 |
+|---|---|
+| 品牌 | RAISECOM（瑞斯康达科技发展股份有限公司，中国制造） |
+| 设备名称 | 集客融合接入设备 |
+| 设备类型 | 中国移动政企网关设备（GPON版 4+0） |
+| 型号 | MSG2100-UPON-AC |
+| 版本 | F.20(SC12) |
+| 额定输入 | +12V, 1A |
+| 生产日期 | 2022-08-25 |
+| 默认终端账号 | user（默认终端配置地址 192.168.1.1） |
+| 进网许可证 | CNA 12-8445-191492 |
+| 设备标识/GPON SN/LAN MAC | 已打码（隐私） |
+| 运营商 | 中国移动通信集团终端有限公司（服务热线 10086） |
 
 ## 四、安装/恢复说明（供 wiki 页面用）
 
@@ -79,16 +95,23 @@
 - DTS 内存节点：448MB + `linux,usable-memory-range=<0x20000 0x1bfe0000>`（512MB 直接映射会挂死）
 - 端口映射（最新修正）：**印刷口 1 = lan1**（DTS 已对调标签，commit c515e74）
 
-## 五、需要用户补充的信息
+## 五、信息收集状态（大部分已确认）
 
-- [ ] 设备照片（正面/背面/PCB，供 wiki 上传 media:raisecom:msg2100-upon-ac_*.jpg）
-- [ ] 电源适配器规格（贴纸文字）
-- [ ] 面板 LED 数量与颜色（PON、LOS、LAN1-4、电源 等）
-- [ ] 按钮数量（复位键等）
-- [ ] 设备标签照片（型号/SN/生产日期/产地）
-- [ ] 确认串口电压 3.3V（万用表量测或看串口转接板适配）
+**已确认（黄色标注为已填）**：
+- [x] 设备照片（正面/背面/标签）→ `/Users/mac/Documents/dsh/photos/{front,back,label}.heic`（转 jpg 在 photos/）
+- [x] 电源适配器规格：**+12V, 1A**（贴纸「额定输入：+12V,1A」+ 适配器）
+- [x] 面板 LED 数量：**4 个**（PON、SYS、LOS、PWR，正面照片确认）
+- [x] 按钮：RST 复位键（小孔）+ PWR 电源开关
+- [x] 设备标签型号/版本：**MSG2100-UPON-AC, F.20(SC12), 生产日期 2022-08-25**
+- [x] 进网许可证：CNA 12-8445-191492；品牌 RAISECOM/瑞斯康达科技发展股份有限公司
+- [x] 默认终端地址 192.168.1.1，账号 user
+
+**待确认**：
+- [ ] 串口电压实测 3.3V（万用表量测，当前按 SoC 标准 3.3V 填）
 - [ ] Raisecom 官网产品页 URL（如有）
-- [ ] 是否申请 openwrt.org wiki 账号（用于创建设备页）
+- [ ] 是否申请 openwrt.org wiki 账号（用于创建 `toh:raisecom:msg2100-upon-ac` 设备页）
+
+> 隐私提醒：标签上的 GPON SN、LAN MAC、设备标识、SN 已被打码，上传到 openwrt.org 时**不要包含**这些敏感信息。
 
 ## 六、ToH 提交流程（待设备上游化后）
 
@@ -132,11 +155,11 @@ Firmware OpenWrt snapshot Install URL: 待上游化后填
 Firmware OpenWrt snapshot Upgrade URL: 待上游化后填
 Flash MB: ['256']
 Forum search: ['MSG2100-UPON-AC']
-GPIOs: 待确认
+GPIOs: 未知
 Git search: ['MSG2100-UPON-AC']
 Installation method(s): ['Serial']
-JTAG: 待确认
-LED count: 待确认
+JTAG: 未知
+LED count: 4
 Model: MSG2100-UPON-AC
 Modem: -
 OEM Device Homepage URL: 待查
@@ -145,7 +168,7 @@ Outdoor: No
 Package architecture: mipsel_24kc
 Phone ports: -
 Picture: ['media:raisecom:msg2100-upon-ac.jpg']
-Power Supply: 待确认
+Power Supply: 12VDC, 1A
 RAM MB: 512
 Recovery method(s): ['Serial']
 SATA ports: -
