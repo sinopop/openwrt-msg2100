@@ -43,7 +43,7 @@
 	chosen {
 		stdout-path = "serial0:115200n8";
 		linux,usable-memory-range = <0x00020000 0x1bfe0000>;
-		bootargs = "ubi.mtd=rootfs root=ubi0:rootfs rootfstype=squashfs";
+		bootargs = "ubi.mtd=rootfs root=/dev/ubiblock0_0 rootfstype=squashfs";
 	};
 
 	aliases {
