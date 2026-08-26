@@ -17,12 +17,31 @@
 ```dts
 // SPDX-License-Identifier: GPL-2.0-or-later
 /*
- * Raisecom MSG2100-UPON-AC (China Mobile, F.20/SC12)
+ * Raisecom MSG2100-UPON-AC (China Mobile Sichuan, F.20/SC12)
  * SoC: Econet/Airoha EN7528HU (MIPS 1004Kc, LE, 900MHz)
  * RAM: 512MB DDR3L (Samsung K4B4G1646B)
  * Flash: Micron MT29F2G01 256MB SPI NAND (2048+64B pages, 128KB blocks)
- * WiFi: none (pure wired: 1x GPON + 4x GE)
+ * WiFi: none (pure wired: 1x PON + 4x GE)
  * UART: 115200 8N1, console on ttyS0 (Econet UART @ 0x1fbf0000)
+ *
+ * Partition table (from stock /proc/mtd):
+ *   mtd0 bootloader     0x00000000-0x00040000 (256K)
+ *   mtd1 romfile        0x00040000-0x00080000 (256K)
+ *   mtd2 kernel         0x00080000-0x002ac19a
+ *   mtd3 rootfs         0x002ac19a-0x021bc19a
+ *   mtd4 tclinux        0x00080000-0x02880000 (40M, main)
+ *   mtd5 kernel_slave   0x02880000-0x02b2c19a
+ *   mtd6 rootfs_slave   0x02b2c19a-0x049bc19a
+ *   mtd7 tclinux_slave  0x02880000-0x05080000 (40M, backup)
+ *   mtd8 osgi           0x05080000-0x08080000 (48M, squashfs)
+ *   mtd9 opt0           0x08080000-0x08280000 (2M)
+ *   mtd10 ubifs         0x08280000-0x09280000 (16M, UBI)
+ *   mtd11 opt1          0x09280000-0x09480000 (2M)
+ *   mtd12 app           0x09480000-0x0dc80000 (72M, UBI)
+ *   mtd13 reservearea   0x0ddc0000-0x0e000000 (2.25M)
+ *
+ * NOTE: This is a DRAFT. Verify against the board before flashing.
+ * The bootloader is "free bootbase" -> kernel decompress addr 0x80002000.
  */
 
 /dts-v1/;
