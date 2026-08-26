@@ -184,7 +184,7 @@ Supported Since Rel: 待上游 release
 Switch: MT7530
 Target: econet
 USB ports: -
-Unsupported Functions: 待确认（GPON 上行在 OpenWrt 下暂不可用，需 xpon 驱动 + OMCI）
+Unsupported Functions: GPON 上行在 OpenWrt 下暂不可用（econet-xpon 驱动未集成；用户决定等上游 PR 接受后再做）
 VLAN: 待确认
 Video ports: -
 WLAN 2.4GHz: -
