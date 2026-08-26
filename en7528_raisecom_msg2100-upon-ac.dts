@@ -123,39 +123,8 @@
 
 		partition@480000 {
 			label = "rootfs";
-			reg = <0x480000 0x2400000>;
+			reg = <0x480000 0xd940000>;
 			econet,enable-remap;
-		};
-
-		partition@2880000 {
-			label = "tclinux_slave";
-			reg = <0x2880000 0x2800000>;
-		};
-
-		partition@5080000 {
-			label = "osgi";
-			reg = <0x5080000 0x3000000>;
-			read-only;
-		};
-
-		partition@8080000 {
-			label = "opt0";
-			reg = <0x8080000 0x200000>;
-		};
-
-		partition@8280000 {
-			label = "ubifs";
-			reg = <0x8280000 0x1000000>;
-		};
-
-		partition@9280000 {
-			label = "opt1";
-			reg = <0x9280000 0x200000>;
-		};
-
-		partition@9480000 {
-			label = "app";
-			reg = <0x9480000 0x4800000>;
 		};
 
 		partition@ddc0000 {
