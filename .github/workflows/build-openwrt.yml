@@ -64,10 +64,8 @@ jobs:
           echo "CONFIG_TARGET_econet_en7528=y" >> .config
           echo "CONFIG_TARGET_econet_en7528_DEVICE_raisecom_msg2100-upon-ac=y" >> .config
           echo "CONFIG_TARGET_ROOTFS_SQUASHFS=y" >> .config
-          # 启用 econet-xpon 包（=m 模块方式：生成 .ipk 但【不编进镜像】）
-          echo "CONFIG_PACKAGE_kmod-econet-xpon=m" >> .config
           make defconfig
-          grep -E "raisecom|CONFIG_TARGET_econet|CONFIG_PACKAGE_kmod-econet-xpon" .config | head -12
+          grep -E "raisecom|CONFIG_TARGET_econet" .config | head -10
 
       - name: Build
         run: |
@@ -75,18 +73,7 @@ jobs:
           set -o pipefail
           make -j$(nproc) V=s 2>&1 | tee build.log
 
-      - name: Build econet-xpon ipk (standalone, not in image)
-        run: |
-          cd openwrt
-          # 单独编译 xpon 驱动生成 .ipk，便于独立安装测试（不编进主镜像，风险最小）
-          make package/kernel/econet-xpon/compile V=s 2>&1 | tee -a build.log || echo "XPON_BUILD_FAILED"
-          # source-only target 的 ipk 可能不在 bin/packages，全盘定位并复制到固定位置
-          mkdir -p ../xpon-ipk
-          find . -name "*econet-xpon*.ipk" -exec cp -v {} ../xpon-ipk/ \; 2>/dev/null || true
-          ls -la ../xpon-ipk/ 2>/dev/null || echo "NO_XPON_IPK"
-          # 同时输出包依赖信息（供安装时参考）
-          cat package/kernel/econet-xpon/Makefile | head -5
-
+      # econet-xpon 暂不编译（之后单独编译测试）
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
@@ -95,7 +82,8 @@ jobs:
             openwrt/bin/targets/econet/en7528/*.trx
             openwrt/bin/targets/econet/en7528/*initramfs*
             openwrt/bin/targets/econet/en7528/*.bin
-            xpon-ipk/
             openwrt/build.log
+            openwrt/.config
+          if-no-files-found: error
             openwrt/.config
           if-no-files-found: error
