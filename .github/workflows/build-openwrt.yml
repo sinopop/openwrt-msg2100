@@ -34,6 +34,7 @@ jobs:
           cd openwrt
           git clone --depth=1 -b econet-xpon-gpon https://github.com/AKoo7/openwrt.git /tmp/pr24577 2>&1 | tail -1
           cp -r /tmp/pr24577/package/kernel/econet-xpon package/kernel/
+          mkdir -p package/kernel/econet-eth/patches
           cp /tmp/pr24577/package/kernel/econet-eth/patches/100-xpon-bench-spike.patch package/kernel/econet-eth/patches/
           ls package/kernel/econet-xpon/Makefile
 
