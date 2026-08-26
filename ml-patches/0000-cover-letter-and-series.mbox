@@ -1,0 +1,312 @@
+Subject: [PATCH v1 0/3] econet: add support for Raisecom MSG2100-UPON-AC
+
+Hi,
+
+This series adds support for the Raisecom MSG2100-UPON-AC, a China
+Mobile (CMCC) custom GPON ONT (F.20/SC12), built on the Econet EN7528
+SoC. It is a pure wired device: 4x 1Gbit via MT7530 + 1x GPON uplink.
+
+The series contains 3 patches:
+
+  1. mips: econet: add support for Raisecom MSG2100-UPON-AC
+     - New device tree for the board.
+
+  2. econet: add Device profile for Raisecom MSG2100-UPON-AC
+     - tclinux-ubi image profile using free bootbase
+       (TRX_LOADADDR 0x80002000), matching the JioFiber EN7528 devices.
+
+  3. mips: econet: timer: fix timer block mapping at boot
+     - Bugfix for all EN7528/EN751627 4-VPE SoCs. The existing EN7528
+       timer support (101-econet-timer-add-en7528-support.patch) uses a
+       runtime num_possible_cpus() that is wrong at early boot and
+       NULL-derefs membase[1] on NR_CPUS=4 devices. This fixes the
+       block-mapping loop to use the compile-time ECONET_NUM_BLOCKS.
+
+Hardware highlights:
+  SoC:      Econet/Airoha EN7528HU (MIPS 1004Kc, 2 cores 4 VPEs, 900MHz)
+  RAM:      512MB DDR3L (Samsung K4B4G1646B)
+  Flash:    Micron MT29F2G01 256MB SPI NAND
+  Ethernet: 4x 1Gbit (MT7530)
+  WLAN:     none (pure wired, 1x GPON + 4x GE)
+  UART:     115200 8N1 on ttyS0
+
+The device boots fully on kernel 6.18 with 4 CPUs up; LAN / WAN / LuCI
+all working. The GPON uplink is functional at the eth/PHY level but not
+yet activated in OpenWrt (the xPON driver is a separate, not-yet
+upstreamed module and requires an OMCI daemon).
+
+Tested-on: Raisecom MSG2100-UPON-AC (F.20/SC12).
+
+Thanks,
+sinopop
+
+---
+
+Links:
+  DTS:  target/linux/econet/dts/en7528_raisecom_msg2100-upon-ac.dts
+  Mk:   target/linux/econet/image/en7528.mk
+  Timer: drivers/clocksource/timer-econet-en751221.c
+
+Note: the CMCC xPON driver was intentionally left out of this series
+(it is a separate module and not yet ready for upstream).
+
+From 0eebc593ccca058089e2e891726303b079369a8a Mon Sep 17 00:00:00 2001
+From: sinopop <sinomaxpop@gmail.com>
+Date: Wed, 26 Aug 2026 23:44:21 +0800
+Subject: mips: econet: add support for Raisecom MSG2100-UPON-AC
+
+Add device tree for the Raisecom MSG2100-UPON-AC GPON ONT
+(China Mobile, F.20/SC12).
+
+SoC:        Econet/Airoha EN7528HU (MIPS 1004Kc, 2 cores 4 VPEs, 900MHz)
+RAM:        512MB DDR3L (Samsung K4B4G1646B)
+Flash:      Micron MT29F2G01 256MB SPI NAND
+Ethernet:   4x 1Gbit (MT7530)
+UART:       115200 8N1 on ttyS0
+WLAN:       none (pure wired, 1x GPON + 4x GE)
+
+Uses 448MB of RAM (top 64MB reserved for NAND/peripherals) with
+linux,usable-memory-range = <0x20000 0x1bfe0000>. The stock bootloader
+is TrendChip "free bootbase", kernel decompress addr 0x80002000.
+
+Partition table is a trimmed 5-layout: bootloader / romfile /
+tclinux (4MB kernel) / rootfs (217MB UBI) / reservearea.
+
+Signed-off-by: sinopop <sinomaxpop@gmail.com>
+---
+ .../dts/en7528_raisecom_msg2100-upon-ac.dts   | 135 ++++++++++++++++++
+ 1 file changed, 135 insertions(+)
+ create mode 100644 target/linux/econet/dts/en7528_raisecom_msg2100-upon-ac.dts
+
+diff --git a/target/linux/econet/dts/en7528_raisecom_msg2100-upon-ac.dts b/target/linux/econet/dts/en7528_raisecom_msg2100-upon-ac.dts
+new file mode 100644
+index 0000000..15ed0f1
+--- /dev/null
++++ b/target/linux/econet/dts/en7528_raisecom_msg2100-upon-ac.dts
+@@ -0,0 +1,135 @@
++// SPDX-License-Identifier: GPL-2.0-or-later
++/*
++ * Raisecom MSG2100-UPON-AC (China Mobile Sichuan, F.20/SC12)
++ * SoC: Econet/Airoha EN7528HU (MIPS 1004Kc, LE, 900MHz)
++ * RAM: 512MB DDR3L (Samsung K4B4G1646B)
++ * Flash: Micron MT29F2G01 256MB SPI NAND (2048+64B pages, 128KB blocks)
++ * WiFi: none (pure wired: 1x PON + 4x GE)
++ * UART: 115200 8N1, console on ttyS0 (Econet UART @ 0x1fbf0000)
++ *
++ * Partition table (from stock /proc/mtd):
++ *   mtd0 bootloader     0x00000000-0x00040000 (256K)
++ *   mtd1 romfile        0x00040000-0x00080000 (256K)
++ *   mtd2 kernel         0x00080000-0x002ac19a
++ *   mtd3 rootfs         0x002ac19a-0x021bc19a
++ *   mtd4 tclinux        0x00080000-0x02880000 (40M, main)
++ *   mtd5 kernel_slave   0x02880000-0x02b2c19a
++ *   mtd6 rootfs_slave   0x02b2c19a-0x049bc19a
++ *   mtd7 tclinux_slave  0x02880000-0x05080000 (40M, backup)
++ *   mtd8 osgi           0x05080000-0x08080000 (48M, squashfs)
++ *   mtd9 opt0           0x08080000-0x08280000 (2M)
++ *   mtd10 ubifs         0x08280000-0x09280000 (16M, UBI)
++ *   mtd11 opt1          0x09280000-0x09480000 (2M)
++ *   mtd12 app           0x09480000-0x0dc80000 (72M, UBI)
++ *   mtd13 reservearea   0x0ddc0000-0x0e000000 (2.25M)
++ *
++ * The bootloader is "free bootbase" -> kernel decompress addr 0x80002000.
++ */
++
++/dts-v1/;
++
++#include "en7528.dtsi"
++
++/ {
++	model = "Raisecom MSG2100-UPON-AC";
++	compatible = "raisecom,msg2100-upon-ac", "econet,en7528";
++
++	memory@0 {
++		device_type = "memory";
++		reg = <0x00000000 0x1c000000>;	/* 448MB (top 64MB is NAND/peripherals) */
++	};
++
++	chosen {
++		stdout-path = "serial0:115200n8";
++		linux,usable-memory-range = <0x00020000 0x1bfe0000>;
++		bootargs = "ubi.mtd=rootfs root=/dev/ubiblock0_0 rootfstype=squashfs";
++	};
++
++	aliases {
++		serial0 = &uart;
++	};
++
++};
++
++&uart {
++	status = "okay";
++};
++
++&gmac0 {
++	status = "okay";
++};
++
++&switch {
++	status = "okay";
++};
++
++&gsw_port1 {
++	label = "lan4";
++	status = "okay";
++};
++
++&gsw_port2 {
++	label = "lan3";
++	status = "okay";
++};
++
++&gsw_port3 {
++	label = "lan2";
++	status = "okay";
++};
++
++&gsw_port4 {
++	label = "lan1";
++	status = "okay";
++};
++
++/* No WiFi / PCIe on this wired-only device */
++&pcie0 {
++	status = "disabled";
++};
++
++&pcie1 {
++	status = "disabled";
++};
++
++&nand {
++	status = "okay";
++	econet,bmt;
++	econet,bbt-table-size = <163>;
++
++	partitions {
++		compatible = "fixed-partitions";
++		#address-cells = <1>;
++		#size-cells = <1>;
++
++		partition@0 {
++			label = "bootloader";
++			reg = <0x0 0x40000>;
++			read-only;
++		};
++
++		partition@40000 {
++			label = "romfile";
++			reg = <0x40000 0x40000>;
++			read-only;
++		};
++
++		partition@80000 {
++			label = "tclinux";
++			reg = <0x80000 0x400000>;
++			econet,enable-remap;
++		};
++
++		partition@480000 {
++			label = "rootfs";
++			reg = <0x480000 0xd940000>;
++			econet,enable-remap;
++		};
++
++		partition@ddc0000 {
++			label = "reservearea";
++			reg = <0xddc0000 0x240000>;
++			read-only;
++		};
++	};
++};
+-- 
+2.37.1 (Apple Git-137.1)
+
+
+From 2ec8bb9caa0151da63272ad7ed0ab0864a2c2a33 Mon Sep 17 00:00:00 2001
+From: sinopop <sinomaxpop@gmail.com>
+Date: Wed, 26 Aug 2026 23:44:21 +0800
+Subject: econet: add Device profile for Raisecom MSG2100-UPON-AC
+
+Add a tclinux-ubi image profile using free bootbase (TRX_LOADADDR
+0x80002000), matching the JioFiber EN7528 devices.
+
+Signed-off-by: sinopop <sinomaxpop@gmail.com>
+---
+ target/linux/econet/image/en7528.mk | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/target/linux/econet/image/en7528.mk b/target/linux/econet/image/en7528.mk
+index 7affa04..369420f 100644
+--- a/target/linux/econet/image/en7528.mk
++++ b/target/linux/econet/image/en7528.mk
+@@ -57,3 +57,15 @@ define Device/jiofiber_jcow407
+   DEVICE_DTS := en7528_jiofiber_jcow407
+ endef
+ TARGET_DEVICES += jiofiber_jcow407
++
++define Device/raisecom_msg2100-upon-ac
++  $(call Device/tclinux-ubi)
++  DEVICE_VENDOR := Raisecom
++  DEVICE_MODEL := MSG2100-UPON-AC
++  DEVICE_DTS := en7528_raisecom_msg2100-upon-ac
++  FACTORY_SIZE := 40m
++  TRX_LOADADDR := 0x80002000
++  KERNEL := kernel-bin | append-dtb | tclinux-free-bootbase-jump | lzma | \
++    kernel-trx
++endef
++TARGET_DEVICES += raisecom_msg2100-upon-ac
+-- 
+2.37.1 (Apple Git-137.1)
+
+
+From eb1c028980c2dcaef884fb1136c1e1a4919a84ce Mon Sep 17 00:00:00 2001
+From: sinopop <sinomaxpop@gmail.com>
+Date: Wed, 26 Aug 2026 23:44:21 +0800
+Subject: mips: econet: timer: fix timer block mapping at boot
+
+timer_init() used DIV_ROUND_UP(num_possible_cpus(), 2) to determine how
+many register blocks to iomap. At early boot with VPE-based SMP, MIPS
+reports num_possible_cpus()=1 (VPEs not yet brought online), giving
+num_blocks=1. Only membase[0] is then mapped via of_iomap.
+
+The EN7528 SoC has 2 physical cores, each with 2 VPEs, giving NR_CPUS=4
+and two timer register blocks (one per core). cevt_init() calls
+cevt_dev_init() for each possible CPU; with NR_CPUS=4, reg_compare()
+dereferences membase[1], which is NULL, causing a kernel panic.
+
+Fix: replace the runtime calculation with ECONET_NUM_BLOCKS, which is
+DIV_ROUND_UP(NR_CPUS, 2) evaluated at compile time (the same expression
+used to declare the membase[] array), so the loop bound and array size
+are provably consistent.
+
+Signed-off-by: sinopop <sinomaxpop@gmail.com>
+---
+ drivers/clocksource/timer-econet-en751221.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/drivers/clocksource/timer-econet-en751221.c b/drivers/clocksource/timer-econet-en751221.c
+index 4008076..9b0722d 100644
+--- a/drivers/clocksource/timer-econet-en751221.c
++++ b/drivers/clocksource/timer-econet-en751221.c
+@@ -170,7 +170,6 @@ err_unmap_irq:
+ 
+ static int __init timer_init(struct device_node *np)
+ {
+-	int num_blocks = DIV_ROUND_UP(num_possible_cpus(), 2);
+ 	struct clk *clk;
+ 	int ret;
+ 
+@@ -182,7 +181,7 @@ static int __init timer_init(struct device_node *np)
+ 
+ 	econet_timer.freq_hz = clk_get_rate(clk);
+ 
+-	for (int i = 0; i < num_blocks; i++) {
++	for (int i = 0; i < ECONET_NUM_BLOCKS; i++) {
+ 		econet_timer.membase[i] = of_iomap(np, i);
+ 		if (!econet_timer.membase[i]) {
+ 			pr_err("%pOFn: failed to map register [%d]\n", np, i);
+-- 
+2.37.1 (Apple Git-137.1)
+
+

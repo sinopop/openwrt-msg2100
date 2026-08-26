@@ -1,0 +1,36 @@
+From 2ec8bb9caa0151da63272ad7ed0ab0864a2c2a33 Mon Sep 17 00:00:00 2001
+From: sinopop <sinomaxpop@gmail.com>
+Date: Wed, 26 Aug 2026 23:44:21 +0800
+Subject: econet: add Device profile for Raisecom MSG2100-UPON-AC
+
+Add a tclinux-ubi image profile using free bootbase (TRX_LOADADDR
+0x80002000), matching the JioFiber EN7528 devices.
+
+Signed-off-by: sinopop <sinomaxpop@gmail.com>
+---
+ target/linux/econet/image/en7528.mk | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/target/linux/econet/image/en7528.mk b/target/linux/econet/image/en7528.mk
+index 7affa04..369420f 100644
+--- a/target/linux/econet/image/en7528.mk
++++ b/target/linux/econet/image/en7528.mk
+@@ -57,3 +57,15 @@ define Device/jiofiber_jcow407
+   DEVICE_DTS := en7528_jiofiber_jcow407
+ endef
+ TARGET_DEVICES += jiofiber_jcow407
++
++define Device/raisecom_msg2100-upon-ac
++  $(call Device/tclinux-ubi)
++  DEVICE_VENDOR := Raisecom
++  DEVICE_MODEL := MSG2100-UPON-AC
++  DEVICE_DTS := en7528_raisecom_msg2100-upon-ac
++  FACTORY_SIZE := 40m
++  TRX_LOADADDR := 0x80002000
++  KERNEL := kernel-bin | append-dtb | tclinux-free-bootbase-jump | lzma | \
++    kernel-trx
++endef
++TARGET_DEVICES += raisecom_msg2100-upon-ac
+-- 
+2.37.1 (Apple Git-137.1)
+

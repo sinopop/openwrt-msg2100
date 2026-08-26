@@ -1,0 +1,51 @@
+Subject: [PATCH v1 0/3] econet: add support for Raisecom MSG2100-UPON-AC
+
+Hi,
+
+This series adds support for the Raisecom MSG2100-UPON-AC, a China
+Mobile (CMCC) custom GPON ONT (F.20/SC12), built on the Econet EN7528
+SoC. It is a pure wired device: 4x 1Gbit via MT7530 + 1x GPON uplink.
+
+The series contains 3 patches:
+
+  1. mips: econet: add support for Raisecom MSG2100-UPON-AC
+     - New device tree for the board.
+
+  2. econet: add Device profile for Raisecom MSG2100-UPON-AC
+     - tclinux-ubi image profile using free bootbase
+       (TRX_LOADADDR 0x80002000), matching the JioFiber EN7528 devices.
+
+  3. mips: econet: timer: fix timer block mapping at boot
+     - Bugfix for all EN7528/EN751627 4-VPE SoCs. The existing EN7528
+       timer support (101-econet-timer-add-en7528-support.patch) uses a
+       runtime num_possible_cpus() that is wrong at early boot and
+       NULL-derefs membase[1] on NR_CPUS=4 devices. This fixes the
+       block-mapping loop to use the compile-time ECONET_NUM_BLOCKS.
+
+Hardware highlights:
+  SoC:      Econet/Airoha EN7528HU (MIPS 1004Kc, 2 cores 4 VPEs, 900MHz)
+  RAM:      512MB DDR3L (Samsung K4B4G1646B)
+  Flash:    Micron MT29F2G01 256MB SPI NAND
+  Ethernet: 4x 1Gbit (MT7530)
+  WLAN:     none (pure wired, 1x GPON + 4x GE)
+  UART:     115200 8N1 on ttyS0
+
+The device boots fully on kernel 6.18 with 4 CPUs up; LAN / WAN / LuCI
+all working. The GPON uplink is functional at the eth/PHY level but not
+yet activated in OpenWrt (the xPON driver is a separate, not-yet
+upstreamed module and requires an OMCI daemon).
+
+Tested-on: Raisecom MSG2100-UPON-AC (F.20/SC12).
+
+Thanks,
+sinopop
+
+---
+
+Links:
+  DTS:  target/linux/econet/dts/en7528_raisecom_msg2100-upon-ac.dts
+  Mk:   target/linux/econet/image/en7528.mk
+  Timer: drivers/clocksource/timer-econet-en751221.c
+
+Note: the CMCC xPON driver was intentionally left out of this series
+(it is a separate module and not yet ready for upstream).
